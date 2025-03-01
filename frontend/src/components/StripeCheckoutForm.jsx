@@ -1,74 +1,131 @@
-import React, { useState } from "react";
-import {
-    PaymentElement,
-    useStripe,
-    useElements
-} from "@stripe/react-stripe-js";
+import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
+import { useState } from "react";
 
-export default function CheckoutForm({dpmCheckerLink}) {
+const CheckoutForm = ({ onPaymentSuccess, startat, endat, clientSecret, clientData, clientId, rentableId, paymentIntentId}) => {
     const stripe = useStripe();
     const elements = useElements();
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    const [message, setMessage] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const createRental = async () => {
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+        try {
+            const response = await fetch("/api/rental/create", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    startat: "",
+                    endat: "",
+                    client: clientId,
+                    rentable: rentableId,
+                    paidOnline: true,
+                    paymentIntentId: paymentIntentId
+                }),
+            });
+
+            const data = await response.json();
+            console.log(data)
+            if (data.status === 200 || data.status === 201) {
+                return true
+            }
+            else {
+                setError(data.error)
+                setLoading(false);
+                return false
+            }
+        } catch (error) {
+            setError(error);
+            setLoading(false);
+            return false
+        }
+    }
+
+    const handleSubmit = async (event) => {
+        event.preventDefault();
 
         if (!stripe || !elements) {
-            // Stripe.js hasn't yet loaded.
-            // Make sure to disable form submission until Stripe.js has loaded.
+            setError("Stripe is not ready.");
+            return;
+        }
+        setLoading(true);
+        setError("");
+
+
+
+        var rentalCreationSuccess = await createRental();
+        console.log("the hell?")
+
+        if (!rentalCreationSuccess) {
             return;
         }
 
-        setIsLoading(true);
+        console.log("here?")
 
-        const { error } = await stripe.confirmPayment({
-            elements,
-            confirmParams: {
-                // Make sure to change this to your payment completion page
-                return_url: "http://localhost:3000/complete",
-            },
-        });
+        const cardElement = elements.getElement(CardElement);
 
-        // This point will only be reached if there is an immediate error when
-        // confirming the payment. Otherwise, your customer will be redirected to
-        // your `return_url`. For some payment methods like iDEAL, your customer will
-        // be redirected to an intermediate site first to authorize the payment, then
-        // redirected to the `return_url`.
-        if (error.type === "card_error" || error.type === "validation_error") {
-            setMessage(error.message);
-        } else {
-            setMessage("An unexpected error occurred.");
+        const { paymentIntent, error } = await stripe.confirmCardPayment(
+            clientSecret,
+            {
+                payment_method: { card: cardElement },
+            }
+        );
+
+        if (error) {
+            setError(error.message);
+        } else if (paymentIntent.status === "succeeded") {
+            console.log("✅ Payment successful!");
+            onPaymentSuccess();
         }
 
-        setIsLoading(false);
+        setLoading(false);
     };
 
-    const paymentElementOptions = {
-        layout: "tabs"
-    }
+    const cardStyle = {
+        hidePostalCode: true, // ✅ Disable ZIP code input
+        style: {
+            base: {
+                fontSize: "16px",
+                color: "#424770",
+                "::placeholder": {
+                    color: "#aab7c4",
+                },
+            },
+            invalid: {
+                color: "#9e2146",
+            },
+        },
+    };
+
 
     return (
-        <>
-            <form id="payment-form" onSubmit={handleSubmit}>
-
-                <PaymentElement id="payment-element" options={paymentElementOptions} />
-                <button disabled={isLoading || !stripe || !elements} id="submit">
-          <span id="button-text">
-            {isLoading ? <div className="spinner" id="spinner"></div> : "Pay now"}
-          </span>
-                </button>
-                {/* Show any error or success messages */}
-                {message && <div id="payment-message">{message}</div>}
-            </form>
-            {/* [DEV]: Display dynamic payment methods annotation and integration checker */}
-            <div id="dpm-annotation">
-                <p>
-                    Payment methods are dynamically displayed based on customer location, order amount, and currency.&nbsp;
-                    <a href={dpmCheckerLink} target="_blank" rel="noopener noreferrer" id="dpm-integration-checker">Preview payment methods by transaction</a>
-                </p>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", height: "100%", padding: "20px"}}>
+            <div style={{
+                width: "100%",
+                maxWidth: "400px",
+                padding: "15px",
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+                boxShadow: "0px 4px 6px rgba(0, 0, 0, 0.1)",
+                marginBottom: "15px",
+                backgroundColor: "#fff",
+            }}>
+                <CardElement options={cardStyle} />
             </div>
-        </>
+            <button type="submit" disabled={loading} style={{
+                padding: "10px 20px",
+                fontSize: "16px",
+                borderRadius: "5px",
+                backgroundColor: "#007bff",
+                color: "#fff",
+                border: "none",
+                cursor: "pointer",
+                transition: "background 0.3s ease",
+            }}>
+                {loading ? "Processing..." : "Pay Now"}
+            </button>
+            {error && <div style={{ color: "red", marginTop: "10px" }}>{error}</div>}
+        </form>
     );
-}
+};
+
+export default CheckoutForm;

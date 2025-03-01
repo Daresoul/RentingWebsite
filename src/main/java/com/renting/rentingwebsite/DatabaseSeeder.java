@@ -1,11 +1,11 @@
 package com.renting.rentingwebsite;
 
-import com.renting.rentingwebsite.entities.Client;
-import com.renting.rentingwebsite.entities.Rentable;
-import com.renting.rentingwebsite.entities.Rentals;
-import com.renting.rentingwebsite.repository.ClientRepository;
-import com.renting.rentingwebsite.repository.RentableRepository;
-import com.renting.rentingwebsite.repository.RentalsRepository;
+import com.renting.rentingwebsite.entities.User;
+import com.renting.rentingwebsite.entities.RentableItem;
+import com.renting.rentingwebsite.entities.Reservation;
+import com.renting.rentingwebsite.repository.UserRepository;
+import com.renting.rentingwebsite.repository.RentableItemRepository;
+import com.renting.rentingwebsite.repository.ReservationRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -17,63 +17,65 @@ import java.time.LocalDate;
 public class DatabaseSeeder {
 
     @Autowired
-    private ClientRepository clientRepository;
+    private UserRepository userRepository;
 
     @Autowired
-    private RentableRepository rentableRepository;
+    private RentableItemRepository rentableItemRepository;
 
     @Autowired
-    private RentalsRepository rentalsRepository;
+    private ReservationRepository reservationRepository;
 
 
     @PostConstruct
     @Transactional
     public void seedDatabase() {
         try {
-            Client client1 = null;
-            Client client2 = null;
-            Rentable rentable1 = null;
-            Rentable rentable2 = null;
+            User user1 = null;
+            User user2 = null;
+            RentableItem rentableItem1 = null;
+            RentableItem rentableItem2 = null;
 
-            if (clientRepository.count() == 0) {
-                client1 = clientRepository.save(new Client("John Doe", "john@example.com"));
-                client2 = clientRepository.save(new Client("Jane Doe", "jane@example.com"));
+            if (userRepository.count() == 0) {
+                user1 = userRepository.save(new User("John Doe", "john@example.com"));
+                user2 = userRepository.save(new User("Jane Doe", "jane@example.com"));
             } else {
-                client1 = clientRepository.findById(1L).orElseThrow(RuntimeException::new);
-                client2 = clientRepository.findById(2L).orElseThrow(RuntimeException::new);
+                user1 = userRepository.findById(1L).orElseThrow(RuntimeException::new);
+                user2 = userRepository.findById(2L).orElseThrow(RuntimeException::new);
             }
 
-            if (rentableRepository.count() == 0) {
-                rentable1 = rentableRepository.save(new Rentable(
+            if (rentableItemRepository.count() == 0) {
+                rentableItem1 = rentableItemRepository.save(new RentableItem(
                         "Slushice Maskine, 3 kammers, 15 liters, mærke Vevo",
                         "Slushice",
                         "Slushice Maskine der indeholder 3 kammers til 3 smage, i alt 15 liter fra Vevo",
                         "",
-                        150
+                        1500
                 ));
-                rentable2 = rentableRepository.save(new Rentable(
+                rentableItem2 = rentableItemRepository.save(new RentableItem(
                         "Royal Catering popcorn maskine i rød",
                         "Popcorn",
                         "En fantastisk popcorn maskine i rød.",
                         "",
-                        100
+                        2000
                 ));
 
             }else {
-                rentable1 = rentableRepository.findById(1L).orElseThrow(RuntimeException::new);
-                rentable2 = rentableRepository.findById(2L).orElseThrow(RuntimeException::new);
+                rentableItem1 = rentableItemRepository.findById(1L).orElseThrow(RuntimeException::new);
+                rentableItem2 = rentableItemRepository.findById(2L).orElseThrow(RuntimeException::new);
             }
 
-            if (rentalsRepository.count() == 0) {
+            if (reservationRepository.count() == 0) {
                 LocalDate start_date = LocalDate.now().plusDays(5);
                 LocalDate end_date = LocalDate.now().plusDays(10);
-                rentalsRepository.save(
-                        new Rentals(
+                reservationRepository.save(
+                        new Reservation(
                                 start_date,
                                 end_date,
                                 true,
-                                client1,
-                                rentable1
+                                true,
+                                user1,
+                                rentableItem1,
+                                ""
                         )
                 );
             }
