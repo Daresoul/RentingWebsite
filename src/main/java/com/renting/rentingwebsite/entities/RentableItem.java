@@ -82,4 +82,12 @@ public class RentableItem {
     public String getType() {
         return type;
     }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getUrlName() {
+        return urlName;
+    }
 }

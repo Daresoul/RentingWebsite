@@ -34,9 +34,9 @@ public class ReservationController {
     }
 
     @PostMapping("/create")
-    public Reservation CreateRental(@RequestBody ReservationDTO rental) throws BadRequestException {
+    public Reservation CreateReservation(@RequestBody ReservationDTO reservationDTO) throws BadRequestException {
 
-        List<PaymentIntentLog> paymentIntents = paymentIntentLogRepository.findByPaymentIntentId(rental.paymentIntentId());
+        List<PaymentIntentLog> paymentIntents = paymentIntentLogRepository.findByPaymentIntentId(reservationDTO.paymentIntentId());
         if (paymentIntents.isEmpty()) {
             throw new BadRequestException("Payment Intent not found");
         }
@@ -53,22 +53,22 @@ public class ReservationController {
             throw new BadRequestException("Payment Intent has expired");
         }
 
-        User user = userRepository.findById(rental.client()).orElseThrow(
+        User user = userRepository.findById(reservationDTO.client()).orElseThrow(
                 () -> new BadRequestException("The sent userID is incorrect please reload.")
         );
 
-        RentableItem rentableItem = rentableItemRepository.findById(rental.rentable()).orElseThrow(
+        RentableItem rentableItem = rentableItemRepository.findById(reservationDTO.rentable()).orElseThrow(
                 () -> new BadRequestException("The rentableID is incorrect please reload.")
         );
 
         Reservation rentals = new Reservation(
-                rental.startat(),
-                rental.endat(),
+                reservationDTO.startat(),
+                reservationDTO.endat(),
                 false,
-                rental.paidOnline(),
+                reservationDTO.paidOnline(),
                 user,
                 rentableItem,
-                rental.paymentIntentId()
+                reservationDTO.paymentIntentId()
         );
 
         reservationRepository.save(rentals);

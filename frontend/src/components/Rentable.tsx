@@ -1,46 +1,57 @@
-import React, {useEffect, useState} from 'react';
-import 'react-date-range/dist/styles.css'; // main style file
-import 'react-date-range/dist/theme/default.css'; // theme css file
-import { DateRangePicker } from 'react-date-range';
-import StripeCheckout from "./StripeCheckout";
+import {useEffect, useState} from 'react';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
+import {DateRangePicker, RangeKeyDict, Range} from 'react-date-range';
+import StripeCheckout from "./StripeCheckout.tsx";
+import {fetchRentable} from "../services/api.ts";
+import {RentableDTOType} from "../types/rentableDTOType.ts";
 
 function Rentable() {
 
 
-    const [rentable, setRentable] = useState({});
+    const [rentable, setRentable] = useState<RentableDTOType | null>(null);
 
-    const [dateRange, setDateRange] = useState({
+    const [dateRange, setDateRange] = useState<Range>({
         startDate: new Date(),
         endDate: new Date(),
         key: 'selection',
     });
 
-    const [disabledDates, setDisabledDates] = useState([])
+    const [disabledDates, setDisabledDates] = useState<Date[]>([])
 
     useEffect(() => {
-        const fetchRental = async () => {
-            try {
-                const response = await fetch('/api/rentable/' + window.location.href.split("/")[4]);
-                const body = await response.json()
-                console.log(body)
-                let dates = []
-                for(let i = 0; i < body.dates.length; i++) {
-                    dates.push(new Date(body.dates[i]))
-                }
-                setDisabledDates(dates)
-                setRentable(body)
-            } catch (error) {
-                console.error('Error fetching clients:', error);
+        const constFetchRental = async () => {
+            var response = await fetchRentable(window.location.href.split("/")[4])
+
+            if (response.status != 200) {
+                console.error(response)
+                return;
             }
+
+            var data = response.data;
+
+            let dates: Date[] = []
+            for(let i = 0; i < data.dates.length; i++) {
+                dates.push(new Date(data.dates[i]))
+            }
+            setDisabledDates(dates)
+            setRentable(data)
+
         };
 
-        fetchRental();
+        constFetchRental();
     }, [])
 
-    function handleSelect(ranges){
-        let x = ranges.selection
-        let startDate = new Date(x.startDate)
-        let endDate = new Date(x.endDate)
+    function handleSelect(ranges : RangeKeyDict){
+        let selection = ranges["selection"]
+
+        if (!selection.startDate || !selection.endDate) {
+            console.log("Dates couldnt be gathered for select")
+            return
+        }
+
+        let startDate = new Date(selection.startDate)
+        let endDate = new Date(selection.endDate)
 
         setDateRange({
             startDate: startDate,
@@ -64,8 +75,8 @@ function Rentable() {
                     </div>
                 </div>
                 <div style={{backgroundColor: 'lightgray', width: '50%'}}>
-                    <h2>{rentable.name}</h2>
-                    <h4 style={{textAlign: "left"}}>{rentable.description}</h4>
+                    <h2>{ rentable ? rentable.name : "Loading..." }</h2>
+                    <h4 style={{textAlign: "left"}}>{ rentable ? rentable.description : "Loading..." }</h4>
                 </div>
             </div>
             <div style={{width: '100%', backgroundColor: 'orange', display: 'flex', flexDirection: 'row'}}>
@@ -82,11 +93,12 @@ function Rentable() {
                         inputRanges={[]}
                     />
                 </div>
+                { rentable ? (
                 <StripeCheckout
-                startDate={dateRange.startDate}
-                endDate={dateRange.endDate}
+                dateRange={dateRange}
                 rentableId={rentable.id}
-                ></StripeCheckout>
+                ></StripeCheckout>) : "Loading..."
+                }
             </div>
         </div>
     )

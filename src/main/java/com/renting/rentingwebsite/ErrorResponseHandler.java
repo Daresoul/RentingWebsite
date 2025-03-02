@@ -1,13 +1,15 @@
 package com.renting.rentingwebsite;
 
 import com.renting.rentingwebsite.DTO.ErrorResponseDTO;
+import com.stripe.exception.StripeException;
 import org.springframework.boot.context.config.ConfigDataResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.ErrorResponse;
+import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
+@ControllerAdvice
 public class ErrorResponseHandler {
 
     @ExceptionHandler(Exception.class)
@@ -33,9 +35,9 @@ public class ErrorResponseHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
+    @ExceptionHandler(StripeException.class)
     @ResponseStatus(HttpStatus.FAILED_DEPENDENCY)
-    public ResponseEntity<ErrorResponseDTO> handleStripeException(IllegalArgumentException ex) {
+    public ResponseEntity<ErrorResponseDTO> handleStripeException(StripeException ex) {
         ErrorResponseDTO error = new ErrorResponseDTO(400, "Stripe failed: " + ex.getMessage());
         return new ResponseEntity<>(error, HttpStatus.FAILED_DEPENDENCY);
     }

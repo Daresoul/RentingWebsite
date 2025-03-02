@@ -1,46 +1,40 @@
 import { useStripe, useElements, CardElement } from "@stripe/react-stripe-js";
-import { useState } from "react";
+import React, { useState } from "react";
+import {Range} from "react-date-range";
+import {createReservation} from "../services/api.ts";
 
-const CheckoutForm = ({ onPaymentSuccess, startat, endat, clientSecret, clientData, clientId, rentableId, paymentIntentId}) => {
+interface StripeCheckoutFormProps {
+    onPaymentSuccess: () => void;
+    dateRange: Range;
+    clientSecret: string;
+    clientData: {
+        email: string,
+        address: string,
+        phone: string,
+        name: string
+    };
+    clientId: number;
+    rentableId: number;
+    paymentIntentId: string;
+}
+
+const CheckoutForm = ({ onPaymentSuccess, dateRange, clientSecret, clientId, rentableId, paymentIntentId} : StripeCheckoutFormProps) => {
     const stripe = useStripe();
     const elements = useElements();
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<String>("");
 
-    const createRental = async () => {
+    const handleCreateRental = async () => {
+        var response = await createReservation(dateRange, clientId, rentableId, true, paymentIntentId)
 
-        try {
-            const response = await fetch("/api/rental/create", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    startat: "",
-                    endat: "",
-                    client: clientId,
-                    rentable: rentableId,
-                    paidOnline: true,
-                    paymentIntentId: paymentIntentId
-                }),
-            });
-
-            const data = await response.json();
-            console.log(data)
-            if (data.status === 200 || data.status === 201) {
-                return true
-            }
-            else {
-                setError(data.error)
-                setLoading(false);
-                return false
-            }
-        } catch (error) {
-            setError(error);
-            setLoading(false);
+        if (!response.ok()) {
             return false
         }
+
+        return true
     }
 
-    const handleSubmit = async (event) => {
+    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         if (!stripe || !elements) {
@@ -52,16 +46,20 @@ const CheckoutForm = ({ onPaymentSuccess, startat, endat, clientSecret, clientDa
 
 
 
-        var rentalCreationSuccess = await createRental();
-        console.log("the hell?")
+        var rentalCreationSuccess = await handleCreateRental();
 
         if (!rentalCreationSuccess) {
+            setError("Unexpected error occurred, please try again later.");
             return;
         }
 
-        console.log("here?")
-
         const cardElement = elements.getElement(CardElement);
+
+        if (!cardElement) {
+            console.error("Could not find the card element!");
+            setError("Unexpected error occured, please reload the page and try again.");
+            return;
+        }
 
         const { paymentIntent, error } = await stripe.confirmCardPayment(
             clientSecret,
@@ -71,7 +69,7 @@ const CheckoutForm = ({ onPaymentSuccess, startat, endat, clientSecret, clientDa
         );
 
         if (error) {
-            setError(error.message);
+            setError(error.message || "");
         } else if (paymentIntent.status === "succeeded") {
             console.log("✅ Payment successful!");
             onPaymentSuccess();

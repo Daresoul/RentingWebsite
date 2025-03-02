@@ -7,11 +7,20 @@ import Radio from "@mui/material/Radio";
 import TextField from "@mui/material/TextField";
 import { Button } from "@mui/material";
 import { Elements } from "@stripe/react-stripe-js";
-import CheckoutForm from "./StripeCheckoutForm";
-import React, { useState } from "react";
-import { stripePromise } from "./LoadStripe";
+import CheckoutForm from "./StripeCheckoutForm.tsx";
+import React, {useState} from "react";
+import { stripePromise } from "./LoadStripe.tsx";
+import { Range } from 'react-date-range';
+import {createPaymentIntent, createUser} from "../services/api.ts";
+import { StripeElementsOptions } from "@stripe/stripe-js";
 
-function StripeCheckout({startDate, endDate, rentableId}) {
+
+interface StripeCheckoutProps {
+    dateRange: Range;
+    rentableId: number;
+}
+
+function StripeCheckout({ dateRange, rentableId }: StripeCheckoutProps) {
     const [clientSecret, setClientSecret] = useState("");
     const [paymentIntentId, setPaymentIntentId] = useState("");
     const [clientId, setClientId] = useState(-1);
@@ -27,59 +36,56 @@ function StripeCheckout({startDate, endDate, rentableId}) {
     });
 
     // Fetch PaymentIntent only when user clicks "Continue to Payment"
-    const fetchPaymentIntent = async () => {
-        try {
-            setLoading(true);
-            console.log(rentableId)
-            const response = await fetch("/api/stripe/payment-intent", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ receipt_email: formData.email, startDate: startDate, endDate: endDate, rentable_id: rentableId }),
-            });
+    const handleFetchingPaymentIntent = async () => {
 
-            const data = await response.json();
-            setPaymentIntentId(data.paymentIntentId)
-            setClientSecret(data.clientSecret);
-            console.log("Payment intent created with", data)
-            setLoading(false);
-        } catch (error) {
-            console.error("Error fetching PaymentIntent:", error);
-            alert("Failed to initiate payment. Try again.");
-            setLoading(false);
+        if (!dateRange.startDate || !dateRange.endDate) {
+            console.log("Coulnt fetch the start and end date in", dateRange);
+            return;
         }
+
+        setLoading(true);
+
+        var response = await createPaymentIntent(formData.email, dateRange.startDate, dateRange.endDate, rentableId)
+
+        if (!response.ok()) {
+            console.log("Couldnt fetch the payment intent from stripe.", response)
+            setLoading(false);
+            return;
+        }
+
+        setPaymentIntentId(response.data.paymentIntentId)
+        setClientSecret(response.data.clientSecret);
+
+        setLoading(false);
     };
 
-    const createUser = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch("/api/clients/create", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: formData.name, email: formData.email }),
-            });
+    const handleCreateUser = async () => {
+        setLoading(true);
+        var response = await createUser(formData.name, formData.email)
 
-            const data = await response.json();
-            setClientId(data.id);
-            console.log("User created with", data)
+        if (!response.ok()) {
+            console.log("Couldnt create user.", response)
             setLoading(false);
-        } catch (error) {
-            console.error("Error creating user:", error);
-            alert("Failed to create user. Try again.");
-            setLoading(false);
+            return false
         }
+
+        setClientId(response.data.id);
+
+        setLoading(false);
+        return true
     };
 
     const paymentSuccess = async () => setStage(2)
 
-    const handleInputChange = (event) => {
+    const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [event.target.name]: event.target.value });
     };
 
-    const handlePaymentChange = (event) => {
+    const handlePaymentChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setPayNow(event.target.value === "true");
     };
 
-    const submitUserInfo = async (event) => {
+    const submitUserInfo = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
         if (!formData.name || !formData.phone || !formData.email) {
@@ -90,8 +96,8 @@ function StripeCheckout({startDate, endDate, rentableId}) {
         setLoading(true);
 
         if (payNow) {
-            await createUser();
-            await fetchPaymentIntent();
+            await handleCreateUser();
+            await handleFetchingPaymentIntent();
             setStage(1)
         } else {
             setStage(2);
@@ -100,8 +106,12 @@ function StripeCheckout({startDate, endDate, rentableId}) {
         setLoading(false);
     };
 
-    const appearance = { theme: "stripe" };
-    const options = { clientSecret, appearance };
+    const appearance: StripeElementsOptions["appearance"] = { theme: "stripe" };
+
+    const options: StripeElementsOptions = {
+        clientSecret,
+        appearance,
+    };
 
     return (
         <div style={{width:'100%', height:"100%", minHeight: '500px'}}>
@@ -133,18 +143,25 @@ function StripeCheckout({startDate, endDate, rentableId}) {
 
             {/* Step 2: Process payment */}
             {payNow && clientId && stage === 1 && clientSecret && (
-                <Elements options={options} stripe={stripePromise} style={{width:'100%', height: '100%', minHeight: '500px'}}>
-                    <CheckoutForm
+              <div style={{ width: "100%", height: "100%", minHeight: "500px" }}>
+                  <Elements options={options} stripe={stripePromise}>
+                      <CheckoutForm
                         onPaymentSuccess={paymentSuccess}
                         clientSecret={clientSecret}
-                        clientData={ {email: formData.email, address: formData.address, phone: formData.phone, name: formData.name} }
+                        clientData={{
+                            email: formData.email,
+                            address: formData.address,
+                            phone: formData.phone,
+                            name: formData.name
+                        }}
                         clientId={clientId}
                         rentableId={rentableId}
                         paymentIntentId={paymentIntentId}
-                        startat={startDate}
-                        endat={endDate}
-                    />
-                </Elements>
+                        dateRange={dateRange}
+                      />
+                  </Elements>
+              </div>
+
             )}
 
             {/* Step 3: Success message */}

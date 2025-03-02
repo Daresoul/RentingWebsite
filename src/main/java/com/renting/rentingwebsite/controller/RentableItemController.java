@@ -52,6 +52,6 @@ public class RentableItemController {
                 currentDate = currentDate.plusDays(1);
             }
         }
-        return new RentableItemDTO(rentableItem.getId(), rentableItem.getName(), rentableItem.getType(), rentableItem.getPrice(), l);
+        return new RentableItemDTO(rentableItem.getId(), rentableItem.getName(), rentableItem.getType(), rentableItem.getDescription(), rentableItem.getUrlName(), rentableItem.getPrice(), l);
     }
 }
