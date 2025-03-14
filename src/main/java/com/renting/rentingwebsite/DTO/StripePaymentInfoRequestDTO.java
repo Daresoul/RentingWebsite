@@ -1,9 +1,9 @@
 package com.renting.rentingwebsite.DTO;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public record StripePaymentInfoRequestDTO(
-        String receiptEmail,
         LocalDate startDate,
         LocalDate endDate,
         long rentable_id

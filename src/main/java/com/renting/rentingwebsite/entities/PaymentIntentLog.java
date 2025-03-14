@@ -1,15 +1,13 @@
 package com.renting.rentingwebsite.entities;
 
+import com.renting.rentingwebsite.enums.PaymentIntentStatus;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Getter
-@Setter
+
 @Entity
 @Table(name = "payment_intent_log")
 public class PaymentIntentLog {
@@ -18,37 +16,47 @@ public class PaymentIntentLog {
     @Column(name = "id")
     private Long id;
 
-    @CreationTimestamp // ✅ Automatically sets creation time
+    @Column(name = "payment_intent_id", nullable = false, unique = true, updatable = false)
+    private String paymentIntentId;
+
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @Enumerated(EnumType.STRING)
+    private PaymentIntentStatus status;
+
+    @Column(name = "amount", updatable = false)
+    private long amount;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, updatable = false)
+    private User user_id;
+
+    @ManyToOne
+    @JoinColumn(name = "reservation_id", referencedColumnName = "id")
+    private Reservation reservation;
+
+    @CreationTimestamp
     @Column(updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "payment_intent_id")
-    private String paymentIntentId;
+    public PaymentIntentLog() {
+        this.paymentIntentId = UUID.randomUUID().toString();
+        this.amount = 1;
+        this.user_id = null;
+        this.reservation = null;
+    }
 
-    @Column(name="user_email")
-    private String userEmail;
-
-    @Column(name = "units")
-    private long units;
-
-    @Column(name = "amount")
-    private long amount;
+    public PaymentIntentLog(String paymentIntentId, User user, long amount) {
+        this.paymentIntentId = paymentIntentId;
+        this.amount = amount;
+        this.user_id = user;
+        this.reservation = null;
+    }
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public PaymentIntentLog() {
-        this.paymentIntentId = UUID.randomUUID().toString();
-        this.userEmail = UUID.randomUUID().toString();
-        this.units = 1;
-        this.amount = 1;
+    public void setStatus(PaymentIntentStatus status) {
+        this.status = status;
     }
-
-    public PaymentIntentLog(String paymentIntentId, String userEmail, long units, long amount) {
-        this.paymentIntentId = paymentIntentId;
-        this.userEmail = userEmail;
-        this.units = units;
-        this.amount = amount;
-    }
- }
+}

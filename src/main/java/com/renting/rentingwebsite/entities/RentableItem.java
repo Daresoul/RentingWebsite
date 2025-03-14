@@ -1,5 +1,6 @@
 package com.renting.rentingwebsite.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.renting.rentingwebsite.URLUtils;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -7,9 +8,8 @@ import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
-@Getter
-@Setter
 @Entity
 @Table(name = "rentable_item")
 public class RentableItem {
@@ -37,6 +37,13 @@ public class RentableItem {
 
     @Column(name = "price")
     private long price;
+
+    @OneToMany(mappedBy = "rentableItem", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<RentableItemImage> images;
+
+    @OneToMany(mappedBy = "rentableItem", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<RentableItemSpecification> specifications;
 
     @OneToMany(mappedBy = "rentableItem")
     private List<Reservation> reservations;
@@ -75,6 +82,10 @@ public class RentableItem {
         return reservations;
     }
 
+    public double getDisplayPrice() {
+        return displayPrice;
+    }
+
     public String getName() {
         return name;
     }
@@ -89,5 +100,13 @@ public class RentableItem {
 
     public String getUrlName() {
         return urlName;
+    }
+
+    public List<RentableItemImage> getImages() {
+        return images;
+    }
+
+    public Set<RentableItemSpecification> getSpecifications() {
+        return specifications;
     }
 }
