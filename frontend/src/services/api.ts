@@ -8,10 +8,10 @@ import { useAuthStore } from "../services/AuthStore";
 import {ReservationType} from "../types/database_entities/reservationType.ts";
 import {DateToISO} from "../UTILS.ts"
 
-const API_BASE_URL = "/api";
+console.log(import.meta.env.VITE_API_BASE_URL)
 
 const apiClient = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: import.meta.env.VITE_API_BASE_URL,
     headers: {
         "Content-Type": "application/json",
     },
