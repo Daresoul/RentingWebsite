@@ -30,10 +30,14 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build \
-            --platform=linux/amd64 \
+          docker build --platform=linux/amd64 \
             -t kebabdk400/renting_service:latest \
             .
 
       - name: Push Docker image
         run: docker push kebabdk400/renting_service:latest
+
+      # ---- Trigger the Render deploy hook ----
+      - name: Trigger Render Deploy
+        run: |
+          curl -X POST "{{DEPLOY_HOOK}}"
