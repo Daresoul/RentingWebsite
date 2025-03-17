@@ -1,16 +1,23 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Box, TextField, Button, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableRow, IconButton } from "@mui/material";
 import {FiTrash2, FiPlus } from "react-icons/fi";
 
+interface KeyValuePair {
+	key: string,
+	value: string
+}
+
 
 export const Product = () => {
-	const [images, setImages] = useState([]);
-	const [specs, setSpecs] = useState([{ key: "", value: "" }]);
-	const [title, setTitle] = useState("");
-	const [description, setDescription] = useState("");
-	const [pricePerDay, setPricePerDay] = useState("");
+	const [images, setImages] = useState<string[]>([]);
+	const [specs, setSpecs] = useState<KeyValuePair[]>([]);
+	const [title, setTitle] = useState<string>("");
+	const [description, setDescription] = useState<string>("");
+	const [pricePerDay, setPricePerDay] = useState<string>("");
 
-	const handleImageUpload = (event) => {
+	const handleImageUpload = (event : React.ChangeEvent<HTMLInputElement>) => {
+		if (event.target.files == null) return
+
 		const files = Array.from(event.target.files);
 		const imageUrls = files.map(file => URL.createObjectURL(file));
 		setImages(prev => [...prev, ...imageUrls]);
@@ -20,13 +27,13 @@ export const Product = () => {
 		setSpecs([...specs, { key: "", value: "" }]);
 	};
 
-	const updateSpec = (index, field, value) => {
+	const updateSpec = (index: number, field: "key" | "value", value: string) => {
 		const newSpecs = [...specs];
 		newSpecs[index][field] = value;
 		setSpecs(newSpecs);
 	};
 
-	const removeSpec = (index) => {
+	const removeSpec = (index: number) => {
 		setSpecs(specs.filter((_, i) => i !== index));
 	};
 
@@ -58,7 +65,7 @@ export const Product = () => {
 					label="Price per Day"
 					value={pricePerDay}
 					onChange={(e) => setPricePerDay(e.target.value)}
-					InputProps={{ startAdornment: "$" }}
+					InputProps={{ startAdornment: "DKK" }}
 					sx={{ mb: 2 }}
 				/>
 			</Box>

@@ -1,7 +1,8 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { Box, CssBaseline, ThemeProvider, createTheme, Drawer, List, ListItem, ListItemIcon, ListItemText } from "@mui/material";
 import { styled } from "@mui/system";
-import { FiHome, FiPieChart, FiPackage, FiShoppingCart, FiUsers, FiSettings } from "react-icons/fi";
+import {FiHome, FiEdit} from "react-icons/fi";
+import {AiFillProduct} from "react-icons/ai";
 
 const darkTheme = createTheme({
 	palette: {
@@ -17,9 +18,9 @@ const darkTheme = createTheme({
 
 const drawerWidth = 240;
 
-const MainContainer = styled(Box)(({ theme }) => ({
+const MainContainer = styled(Box)(() => ({
 	display: "flex",
-	minHeight: "100vh"
+	minHeight: "50%"
 }));
 
 const ContentWrapper = styled(Box)(({ theme }) => ({
@@ -28,7 +29,7 @@ const ContentWrapper = styled(Box)(({ theme }) => ({
 	backgroundColor: theme.palette.background.default
 }));
 
-const StyledDrawer = styled(Drawer)(({ theme }) => ({
+const StyledDrawer = styled(Drawer)(() => ({
 	width: drawerWidth,
 	flexShrink: 0,
 	"& .MuiDrawer-paper": {
@@ -39,11 +40,8 @@ const StyledDrawer = styled(Drawer)(({ theme }) => ({
 
 const menuItems = [
 	{ text: "Dashboard", icon: <FiHome />, id: "dashboard" },
-	{ text: "Analytics", icon: <FiPieChart />, id: "analytics" },
-	{ text: "Products", icon: <FiPackage />, id: "products" },
-	{ text: "Orders", icon: <FiShoppingCart />, id: "orders" },
-	{ text: "Users", icon: <FiUsers />, id: "users" },
-	{ text: "Settings", icon: <FiSettings />, id: "settings" }
+	{ text: "New product", icon: <AiFillProduct />, id: "new-product" },
+	{ text: "Edit product", icon: <FiEdit />, id: "edit-product" },
 ];
 
 const DashboardLayout = () => {

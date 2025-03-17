@@ -66,11 +66,11 @@ function App() {
         element: <DashboardLayout />,
         children: [
           {
-            path: "",
+            path: "dashboard",
             element: <Product />
           },
           {
-            path: "/new-product",
+            path: "new-product",
             element: <Product />
           }
         ]
