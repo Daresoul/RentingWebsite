@@ -31,8 +31,8 @@ public class Reservation {
     @Column(name = "paid")
     private boolean paid;
 
-    @Column(name = "payment_intent_id")
-    private String PaymentIntentId;
+    @Column(name = "stripe_instance_id", nullable = false, unique = true)
+    private String stripeInstanceId;
 
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id")
@@ -42,14 +42,14 @@ public class Reservation {
     @JoinColumn(name = "rentable_id", referencedColumnName = "id")
     private RentableItem rentableItem;
 
-    public Reservation(LocalDate start_at, LocalDate endAt, boolean paid, boolean rentalPaidOnline, User user, RentableItem rentableItem, String paymentIntentId) {
+    public Reservation(LocalDate start_at, LocalDate endAt, boolean paid, boolean rentalPaidOnline, User user, RentableItem rentableItem, String stripeInstanceId) {
         this.startAt = start_at;
         this.endAt = endAt;
         this.paid = paid;
         this.rentableItem = rentableItem;
         this.user = user;
         this.rentalPaidOnline = rentalPaidOnline;
-        this.PaymentIntentId = paymentIntentId;
+        this.stripeInstanceId = stripeInstanceId;
     }
 
     public Reservation() {

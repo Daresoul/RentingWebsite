@@ -30,20 +30,17 @@ export const useAuthStore = create<AuthState>()(
 			isLoggedIn: false,
 			authToken: null,
 			user: null,
-			setUser: (user: UserType | null) => {set({user: user})},
+			setUser: (user: UserType | null) => set({ user }),
 			login: (token: string) => {
-				sessionStorage.setItem("authToken", token);
 				set({ isLoggedIn: true, authToken: token });
 			},
 			logout: () => {
-				sessionStorage.removeItem("authToken");
 				set({ isLoggedIn: false, authToken: null, user: null });
 			},
 		}),
 		{
 			name: "auth-storage",
-			storage: createJSONStorage(() => sessionStorage),
-			partialize: (state) => ({ isLoggedIn: state.isLoggedIn }),
+			storage: createJSONStorage(() => localStorage),
 		}
 	)
 );

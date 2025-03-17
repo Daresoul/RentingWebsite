@@ -4,36 +4,37 @@ import {
 	Button,
 	Card,
 	CardMedia,
+	Chip,
 	Container,
 	Dialog,
-	Grid,
-	Typography,
-	IconButton,
-	Stack,
-	Chip,
-	RadioGroup,
-	FormControlLabel,
-	Radio,
 	FormControl,
+	FormControlLabel,
 	FormLabel,
+	Grid,
+	IconButton,
+	Radio,
+	RadioGroup,
+	Stack,
+	Typography,
 } from "@mui/material";
-import { styled } from "@mui/system";
-import { FaLock, FaTimes } from "react-icons/fa";
-import { format, addDays } from "date-fns";
+import {styled} from "@mui/system";
+import {FaLock, FaTimes} from "react-icons/fa";
+import {addDays, format} from "date-fns";
 import {Range} from "react-date-range";
 import {RentableDTOType} from "../types/rentableDTOType.ts";
-import {
-	CardCvcElement,
-	CardExpiryElement,
-	CardNumberElement,
-	useElements,
-	useStripe
-} from "@stripe/react-stripe-js";
+import {CardCvcElement, CardExpiryElement, CardNumberElement, useElements, useStripe} from "@stripe/react-stripe-js";
 
-import { Theme } from "@mui/material/styles";
-import {createPaymentIntent, isErrorResponse, validateReservation} from "../services/api.ts";
+import {Theme} from "@mui/material/styles";
+import {
+	createInvoice,
+	createPaymentIntent,
+	isErrorResponse,
+	pollPaymentStatus,
+	validateReservation
+} from "../services/api.ts";
 import {StripePaymentIntentType} from "../types/stripePaymentIntentType.ts";
 import {loadingStore} from "../services/AuthStore.ts";
+import {PaymentIntentStatus} from "../types/PaymentStatus.ts";
 
 interface styledDialogProps {
 	theme?: Theme;
@@ -64,7 +65,7 @@ interface StripeCheckoutProps {
 
 
 
-const StripeCheckout = ({modalOpen, closeModal, dateRange, rentable, price} : StripeCheckoutProps) => {
+const StripeCheckout = ({modalOpen, closeModal, dateRange, rentable, price, addDates} : StripeCheckoutProps) => {
 	const stripe = useStripe();
 	const elements = useElements();
 
@@ -118,6 +119,49 @@ const StripeCheckout = ({modalOpen, closeModal, dateRange, rentable, price} : St
 
 	const handleSubmit = async () => {
 
+		if (paymentMethod == "online") {
+			await handleStripePayment()
+		} else {
+			await handlePickup()
+		}
+	}
+
+	const handlePickup = async () => {
+		setLoading(true, "Creating reservation")
+
+		if (dateRange.startDate == undefined || dateRange.endDate == undefined) {
+			setError("You need to select valid dates!")
+			setLoading(false, "")
+			return
+		}
+
+		if (rentable == null) {
+			setError("Couldnt find the rentable item, please reload the page.")
+			setLoading(false, "")
+			return
+		}
+
+		const response = await createInvoice(
+			dateRange.startDate,
+			dateRange.endDate,
+			rentable.id
+		);
+
+		if (isErrorResponse(response)) {
+			setError(response.data.message)
+			setLoading(false, "")
+			return;
+		}
+
+		setLoading(false, "")
+		setIsModalOpen(false)
+		setError("")
+		if (dateRange.startDate && dateRange.endDate) addDates(dateRange.startDate, dateRange.endDate)
+
+	}
+
+	const handleStripePayment = async () => {
+
 		setLoading(true, "Processing payment")
 		if (!stripe || !elements) {
 			setError("Stripe is not ready.");
@@ -152,7 +196,7 @@ const StripeCheckout = ({modalOpen, closeModal, dateRange, rentable, price} : St
 		}
 
 		try {
-			const { paymentIntent: confirmedPayment, error: intentError } = await stripe.confirmCardPayment(paymentIntent.clientSecret, {
+			const { paymentIntent: _confirmedPayment, error: _intentError } = await stripe.confirmCardPayment(paymentIntent.clientSecret, {
 				payment_method: {
 					card: cardElement,
 					billing_details: {
@@ -161,21 +205,52 @@ const StripeCheckout = ({modalOpen, closeModal, dateRange, rentable, price} : St
 				},
 			});
 
-			if (intentError) {
+			/*if (intentError) {
+				console.log("intent_Error?")
 				setError(intentError.message || "Error confirming payment.");
 				setLoading(false, "")
 				return;
-			}
+			}*/
 
-			if (confirmedPayment.status === "succeeded") {
-				console.log("✅ Payment successful!");
-				setError("");
-				setLoading(false, "")
-				setIsModalOpen(false)
-			} else {
-				setError("Payment was not successful.");
-				setLoading(false, "")
-			}
+			const intervalId = setInterval(async () => {
+				const response = await pollPaymentStatus(paymentIntent.paymentIntentId)
+
+				if (isErrorResponse(response)) {
+					setLoading(false, "")
+					setError(response.data.message)
+					return;
+				}
+
+				if (response.data.paid == PaymentIntentStatus.SUCCEEDED) {
+					setLoading(false, "")
+					setIsModalOpen(false)
+					setError("")
+					if (dateRange.startDate && dateRange.endDate) addDates(dateRange.startDate, dateRange.endDate)
+					clearInterval(intervalId)
+					return;
+				} else {
+					switch (response.data.paid) {
+						case PaymentIntentStatus.REFUNDED:
+							setLoading(false, "")
+							setError("A server error happend creating the reservation.")
+							clearInterval(intervalId)
+							break
+						case PaymentIntentStatus.CANCELED:
+							setLoading(false, "")
+							setError("Payment cancelled")
+							clearInterval(intervalId)
+							break
+						case PaymentIntentStatus.REQUIRES_PAYMENT_METHOD:
+							setLoading(false, "")
+							setError("Payment failed")
+							clearInterval(intervalId)
+							break
+						default:
+							setLoading(true, response.data.paid.toString())
+							break
+					}
+				}
+			}, 4000);
 		} catch (err) {
 			setError("Unexpected error occurred. Please try again.");
 			setLoading(false, "")

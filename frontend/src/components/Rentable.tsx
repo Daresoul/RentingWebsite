@@ -67,12 +67,14 @@ const RentalProperty = ({ onOpenChange }: RentableProps) => {
 			console.log(data)
 			setRentable(data)
 			setLoading(false, "")
+			setPrice(data.price)
 		};
 
 		constFetchRental();
 	}, [])
 
 	const addDisabledDates = async (startDate: Date, endDate: Date) => {
+
 		const dates: Date[] = [];
 		let currentDate = new Date(startDate);
 

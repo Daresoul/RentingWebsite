@@ -7,10 +7,13 @@ import {useAuthStore} from "./services/AuthStore.ts";
 import {useEffect, useState} from "react";
 import LoginModal from "./components/Modals/LoginModal.tsx";
 import Loading from "./components/Loading.tsx";
+import {checkLoggedIn, isErrorResponse} from "./services/api.ts";
+import DashboardLayout from "./components/Dashboard/DashboardLayout.tsx";
+import {Product} from "./components/Dashboard/Product.tsx";
 
 function App() {
 
-  const { login } = useAuthStore();
+  const { authToken, logout, setUser, login} = useAuthStore();
 
   const [isLoginModalOpen, setLoginModalOpen] = useState(false);
   const [modalType, setModalType] = useState<"login" | "register">("login");
@@ -24,10 +27,24 @@ function App() {
   };
 
   useEffect(() => {
-    const token = sessionStorage.getItem("authToken");
-    if (token) {
-      login(token);
+    const checkLogin = async () => {
+      if (authToken) {
+        var response = await checkLoggedIn();
+
+        if (isErrorResponse(response)) {
+          logout()
+          return;
+        }
+
+        login(authToken)
+        setUser(response.data)
+
+      } else {
+        logout()
+      }
     }
+
+    checkLogin()
   }, []);
 
 
@@ -44,13 +61,21 @@ function App() {
         element: <Rentable onOpenChange={handleOpenChange} />,
         children: []
       },
+      {
+        path: "/dashboard",
+        element: <DashboardLayout />,
+        children: [
+          {
+            path: "",
+            element: <Product />
+          },
+          {
+            path: "/new-product",
+            element: <Product />
+          }
+        ]
+      }
     ],
-    /*{
-      future: {
-        v7_relativeSplatPath: true,
-        v7_startTransition: true,
-      },
-    }*/
   );
 
 

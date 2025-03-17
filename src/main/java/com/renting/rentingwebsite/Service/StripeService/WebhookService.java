@@ -18,12 +18,16 @@ import com.stripe.model.StripeObject;
 import com.stripe.net.Webhook;
 import com.stripe.service.PaymentIntentService;
 import org.apache.coyote.BadRequestException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 
 @Service
 public class WebhookService {
+
+    private final Logger logger = LoggerFactory.getLogger(WebhookService.class);
 
     private final ReservationService reservationService;
     private final UserRepository userRepository;
@@ -51,15 +55,33 @@ public class WebhookService {
 
         switch (event.getType()) {
             case "payment_intent.succeeded":
-                PaymentIntent paymentIntent = (PaymentIntent) stripeObject;
-                handlePaymentSuccess(paymentIntent);
+                PaymentIntent successPaymentIntent = (PaymentIntent) stripeObject;
+                handlePaymentSuccess(successPaymentIntent);
                 break;
             case "payment_intent.payment_failed":
-                System.out.println("❌ Payment failed: " + event);
+                PaymentIntent failedPaymentIntent = (PaymentIntent) stripeObject;
+                handlePaymentFailed(failedPaymentIntent);
                 break;
             default:
                 System.out.println("Unhandled event type: " + event.getType());
         }
+    }
+
+    private void handlePaymentFailed(PaymentIntent paymentIntent) throws StripeException, BadRequestException {
+
+        logger.error("Payment intent failed recieved with status {}", paymentIntent.getStatus());
+
+        PaymentIntentLog paymentIntentLog = paymentIntentLogRepository.findByPaymentIntentId(paymentIntent.getId()).orElseThrow(
+                () -> new BadRequestException("Payment intent does not exist in database")
+        );
+
+        if (PaymentIntentStatus.SUCCEEDED == paymentIntentLog.getStatus()) {
+            throw new BadRequestException("Payment has already been succeeded");
+        }
+
+        paymentIntentLog.setStatus(PaymentIntentStatus.getPaymentIntentStatus(paymentIntent.getStatus()));
+
+        paymentIntentLogRepository.save(paymentIntentLog);
     }
 
     private void handlePaymentSuccess(PaymentIntent paymentIntent) throws BadRequestException, StripeException {

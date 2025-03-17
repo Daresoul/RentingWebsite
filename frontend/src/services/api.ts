@@ -4,11 +4,12 @@ import {ErrorResponse, ReturnType} from "./APIDataTypes.ts";
 import {StripePaymentIntentType} from "../types/stripePaymentIntentType.ts";
 import {Range} from "react-date-range";
 import {AuthReturnType} from "../types/AuthReturnType.ts";
-import { useAuthStore } from "../services/AuthStore";
+import { useAuthStore } from "./AuthStore.ts";
 import {ReservationType} from "../types/database_entities/reservationType.ts";
 import {DateToISO} from "../UTILS.ts"
+import {PaymentStatus} from "../types/PaymentStatus.ts"
+import {UserType} from "../types/database_entities/userType.ts";
 
-console.log(import.meta.env.VITE_API_BASE_URL)
 
 const apiClient = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -18,9 +19,9 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-    const { authToken } = useAuthStore.getState();
+    const { authToken, isLoggedIn } = useAuthStore.getState();
 
-    if (authToken) {
+    if (authToken && isLoggedIn) {
         config.headers.Authorization = `Bearer ${authToken}`;
     }
 
@@ -125,12 +126,21 @@ export const fetchRentable = async (name: String) => {
 };
 
 export const createPaymentIntent = async (startDate: Date, endDate: Date, rentableId: number) => {
-    const { authToken } = useAuthStore.getState();
-
-    console.log("authToken:", authToken);
-
     try {
         const response: AxiosResponse<StripePaymentIntentType, any> = await apiClient.post("/stripe/payment-intent", {
+            startDate: DateToISO(startDate),
+            endDate: DateToISO(endDate),
+            rentable_id: rentableId,
+        });
+        return fetchData(response);
+    } catch (error: any) {
+        return handleErrorInResponse<ErrorResponse>(error);
+    }
+};
+
+export const createInvoice = async (startDate: Date, endDate: Date, rentableId: number) => {
+    try {
+        const response: AxiosResponse<ReservationType, any> = await apiClient.post("/stripe/invoice", {
             startDate: DateToISO(startDate),
             endDate: DateToISO(endDate),
             rentable_id: rentableId,
@@ -151,6 +161,28 @@ export const validateReservation = async (
             endat: dateRange.endDate,
             rentable: rentableId,
         });
+
+        return fetchData(response);
+    } catch (error: any) {
+        return handleErrorInResponse<ErrorResponse>(error);
+    }
+}
+
+export const pollPaymentStatus = async (
+    paymentIntentID: string
+) => {
+    try {
+        const response : AxiosResponse<PaymentStatus, any> = await apiClient.get("/stripe/payment-status/" + paymentIntentID);
+
+        return fetchData(response);
+    } catch (error: any) {
+        return handleErrorInResponse<ErrorResponse>(error);
+    }
+}
+
+export const checkLoggedIn = async () => {
+    try {
+        const response : AxiosResponse<UserType, any> = await apiClient.get("/auth/check");
 
         return fetchData(response);
     } catch (error: any) {

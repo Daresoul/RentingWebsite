@@ -28,7 +28,7 @@ public class PaymentIntentLog {
 
     @ManyToOne
     @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false, updatable = false)
-    private User user_id;
+    private User user;
 
     @ManyToOne
     @JoinColumn(name = "reservation_id", referencedColumnName = "id")
@@ -41,15 +41,36 @@ public class PaymentIntentLog {
     public PaymentIntentLog() {
         this.paymentIntentId = UUID.randomUUID().toString();
         this.amount = 1;
-        this.user_id = null;
+        this.user = null;
         this.reservation = null;
     }
 
     public PaymentIntentLog(String paymentIntentId, User user, long amount) {
         this.paymentIntentId = paymentIntentId;
         this.amount = amount;
-        this.user_id = user;
+        this.user = user;
+        this.status = PaymentIntentStatus.PROCESSING;
         this.reservation = null;
+    }
+
+    public String getPaymentIntentId() {
+        return paymentIntentId;
+    }
+
+    public PaymentIntentStatus getStatus() {
+        return status;
+    }
+
+    public long getAmount() {
+        return amount;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public Reservation getReservation() {
+        return reservation;
     }
 
     public LocalDateTime getCreatedAt() {
